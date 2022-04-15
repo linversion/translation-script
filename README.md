@@ -1,3 +1,5 @@
+a python script help you parse the multi language excel into specific format.
+--
 ```python
 # change the format by your needs
 formatter = '<string name=\"{name}\">{str}</string>\n'
@@ -18,3 +20,7 @@ if __name__ == '__main__':
 ```
 
 step 2: checkout the result in result.xml
+
+![excel](https://github.com/linversion/translation-script/blob/main/excel.png)
+
+![result](https://github.com/linversion/translation-script/blob/main/result.png)
