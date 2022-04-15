@@ -21,6 +21,6 @@ if __name__ == '__main__':
 
 step 2: checkout the result in result.xml
 
-![excel](https://github.com/linversion/translation-script/blob/main/excel.png)
+![excel](https://raw.githubusercontent.com/linversion/translation-script/main/excel.png)
 
-![result](https://github.com/linversion/translation-script/blob/main/result.png)
+![result](https://raw.githubusercontent.com/linversion/translation-script/main/result.png)
