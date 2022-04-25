@@ -1,0 +1,17 @@
+<resources>
+    <string name="product_loading">Loading…</string>
+    <string name="save">Save</string>
+    <string name="photo_picker_all">All</string>
+    <string name="photo_picker_video">Video</string>
+    <string name="photo_picker_photo">Photo</string>
+    <string name="app_name">Ritmo Video</string>
+    <string name="civil_war">Civil War</string>
+    <string name="wanna_believe">Wanna Believe</string>
+    <string name="very_ape">Very Ape</string>
+    <string name="monkey_gone_to_heaven">Monkey Gone To Heaven</string>
+    <string-array name="faq">
+        <item>hahaha</item>
+        <item>nananan</item>
+        <item>yoyo</item>
+    </string-array>
+</resources>
