@@ -64,10 +64,12 @@ def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_colum
         res_dict[language] = trans_list
 
     write_result_to_xml(res_dict, key_list)
-    for folder in values_folders:
-        file_path = '%s%s/strings.xml' % (res_path, folder)
-        print 'exporting %s' % folder
-        export_to_xml(file_path, res_dict[folder], key_list)
+    if export_direct_to_res:
+        # need export to res
+        for folder in values_folders:
+            file_path = '%s%s/strings.xml' % (res_path, folder)
+            print 'exporting %s' % folder
+            export_to_xml(file_path, res_dict[folder], key_list)
     print('finish...')
 
 
