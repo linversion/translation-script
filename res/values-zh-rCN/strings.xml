@@ -1,8 +1,7 @@
 <resources>
-    <string name="product_loading">Loading…</string>
-    <string name="save">Save</string>
-    <string name="photo_picker_all">All</string>
-    <string name="photo_picker_video">Video</string>
-    <string name="photo_picker_photo">Photo</string>
-    <string name="app_name">Ritmo Video</string>
+
+    <string name="civil_war">内战</string>
+    <string name="wanna_believe">想相信</string>
+    <string name="very_ape">很猿</string>
+    <string name="monkey_gone_to_heaven">猴子去天堂了</string>
 </resources>

@@ -2,13 +2,10 @@
 import os
 import sys
 import openpyxl
-import collections
-
-import xmltodict
 
 
 def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_column=1, end_row=1, end_col=1,
-               export_direct_to_res=False):
+               export_direct_to_res=False, backup_origin_string_xml=False):
     """read the Excel file
 
     :param path: the Excel file path
@@ -34,6 +31,9 @@ def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_colum
 
     :param export_direct_to_res: whether need to export trans direct to your project's res value folder or not
     :type export_direct_to_res: bool
+
+    :param backup_origin_string_xml: whether need to back up the origin string.xml file
+    :type backup_origin_string_xml: bool
     """
     workbook = openpyxl.load_workbook(path)
 
@@ -42,7 +42,7 @@ def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_colum
     rows = sheet.max_row
     cols = sheet.max_column
     real_end_row = end_row + 1 if end_row != 1 else rows
-    real_end_col = end_col + 1 if end_col != 1 else cols
+    real_end_col = end_col + 1 if end_col != 1 else cols + 1
     res_dict = {}
     key_list = []
     read_key = False
@@ -59,67 +59,49 @@ def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_colum
 
             # get the cell value
             cell_value = sheet.cell(row, col).value
+            if cell_value is not None:
+                cell_value.replace('\'', "\\'").replace('‘', '\'').replace('’', '\'')
             trans_list.append(cell_value if cell_value is not None else "blank_value")
         read_key = True
         res_dict[language] = trans_list
-
+    # 写入result.xml
     write_result_to_xml(res_dict, key_list)
     if export_direct_to_res:
         # need export to res
-        for folder in values_folders:
-            file_path = '%s%s/strings.xml' % (res_path, folder)
-            print 'exporting %s' % folder
-            export_to_xml(file_path, res_dict[folder], key_list)
+        for language in res_dict.keys():
+            key = language.encode('utf-8')
+            if values_folder_dict.get(key) is not None:
+                folder = values_folder_dict[key]
+                file_path = '%s%s/strings.xml' % (res_path, folder)
+                print 'exporting %s' % folder
+                export_to_xml(file_path, res_dict[language], key_list, backup_origin_string_xml)
     print('finish...')
 
 
-def export_to_xml(file_path, trans_list, key_list):
-    string_ordered_dict_list = []
-    string_array_ordered_dict_list = []
+def export_to_xml(file_path, trans_list, key_list, backup_origin_string_xml):
+    # check if need backup
+    if backup_origin_string_xml:
+        os.rename(file_path, file_path.replace('strings.xml', 'strings-backup.xml'))
 
-    with open(file_path, 'r') as f:
-        data_dict = xmltodict.parse(f.read())['resources']
+    with open(file_path, 'a+') as f:
 
-        # list OrderedDict
-        # key: @name value: #text
-        string_ordered_dict_list = data_dict['string']
-        # key: @name value: item(list[string])
-        string_array_data = data_dict['string-array']
-        if type(string_array_data) is not list:
-            string_array_ordered_dict_list.append(string_array_data)
+        # delete the last </resources> tag
+        pos = f.tell() - 1
+        while pos > 0 and f.read(1) != '\n':
+            pos -= 1
+            f.seek(pos, os.SEEK_SET)
 
-        # print string_ordered_dict_list
-        # print string_array_ordered_dict_list
+        if pos > 0:
+            f.seek(pos, os.SEEK_SET)
+            f.truncate()
 
-    os.rename(file_path, file_path.replace('strings.xml', 'strings-backup.xml'))
-    with open(file_path, 'w+') as f:
-        ordered_dict = collections.OrderedDict()
-
-        for item in string_ordered_dict_list:
-            key = item['@name']
-            value = item['#text']
-            ordered_dict[key] = value
+        f.write('\n')
         for index in range(len(key_list)):
             key = key_list[index]
-            ordered_dict[key] = trans_list[index]
-        print ordered_dict
-
-        f.write('<resources>\n')
-        # 处理string
-        for key, value in ordered_dict.items():
+            value = trans_list[index]
             f.write('    ')
             f.write(formatter.format(name=key, str=value))
             f.write('\n')
-
-        # 处理string-array
-        for item in string_array_ordered_dict_list:
-            name = item['@name']
-            array = item['item']
-            f.write('    <string-array name=\"%s\">\n' % name)
-            for item_text in array:
-                f.write('        <item>%s</item>\n' % item_text)
-            f.write('    </string-array>\n')
-
         f.write('</resources>')
 
 
@@ -145,8 +127,24 @@ def write_result_to_xml(res_dict, key_list):
 {str} : the translation placeholder
 '''
 formatter = '<string name=\"{name}\">{str}</string>'
-values_folders = ['values', 'values-zh-rCN']
-res_path = './res/'
+values_folder_dict = {
+    '英语': 'values',
+    '简体中文': 'values-zh-rCN',
+    '英文 en': 'values',
+    '繁中 zh_TW': 'values-zh-rTW',
+    '日文 ja': 'values-ja',
+    '韩语 ko': 'values-ko',
+    '西语 es': 'values-es',
+    '葡语 pt': 'values-pt',
+    '俄语 ru': 'values-ru',
+    '法语 fr': 'values-fr',
+    '德语': 'values-de',
+    '土耳其语': 'values-tr',
+    '意大利语': 'values-it',
+    '泰语': 'values-th',
+    '越南语': 'values-vi'
+}
+res_path = 'res/'
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     reload(sys)
@@ -154,10 +152,11 @@ if __name__ == '__main__':
     read_excel(
         'trans-sample.xlsx',
         sheet_name='Sheet1',
-        start_column=2,
-        start_row=2,
-        key_column=1,
+        start_column=1,
         end_col=3,
+        start_row=2,
         end_row=5,
-        export_direct_to_res=False
+        key_column=1,
+        export_direct_to_res=True,
+        backup_origin_string_xml=False
     )

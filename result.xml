@@ -1,14 +1,21 @@
-<!-- values-zh-rCN -->
-<string name="civil_war">内战</string>
-<string name="wanna_believe">想相信</string>
-<string name="very_ape">很猿</string>
-<string name="monkey_gone_to_heaven">猴子去天堂了</string>
-
-
-<!-- values -->
+<!-- 英语 -->
 <string name="civil_war">Civil War</string>
 <string name="wanna_believe">Wanna Believe</string>
 <string name="very_ape">Very Ape</string>
 <string name="monkey_gone_to_heaven">Monkey Gone To Heaven</string>
+
+
+<!-- key -->
+<string name="civil_war">civil_war</string>
+<string name="wanna_believe">wanna_believe</string>
+<string name="very_ape">very_ape</string>
+<string name="monkey_gone_to_heaven">monkey_gone_to_heaven</string>
+
+
+<!-- 简体中文 -->
+<string name="civil_war">内战</string>
+<string name="wanna_believe">想相信</string>
+<string name="very_ape">很猿</string>
+<string name="monkey_gone_to_heaven">猴子去天堂了</string>
 
 
