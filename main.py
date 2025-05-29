@@ -4,10 +4,18 @@ import sys
 import imp
 
 import openpyxl
+import xml.etree.ElementTree as ET
+from collections import OrderedDict
 
-
-def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_column=1, end_row=1, end_col=1,
-               export_direct_to_res=False, backup_origin_string_xml=False):
+def read_excel(path,
+               sheet_name='Sheet1',
+               start_column=1,
+               start_row=1,
+               key_column=1,
+               end_row=1,
+               end_col=1,
+               export_direct_to_res=False,
+               backup_origin_string_xml=False):
     """read the Excel file
 
     :param path: the Excel file path
@@ -62,20 +70,22 @@ def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_colum
             # get the cell value
             cell_value = sheet.cell(row, col).value
             if cell_value is not None:
-                cell_value.replace('\'', "\\'").replace('‘', '\'').replace('’', '\'')
+                cell_value.replace("'", "\\'").replace("…", "…")
             trans_list.append(cell_value if cell_value is not None else "blank_value")
         read_key = True
         res_dict[language] = trans_list
     # 写入result.xml
     write_result_to_xml(res_dict, key_list)
+    # 直接写入项目资源文件
     if export_direct_to_res:
         # need export to res
         for language in res_dict.keys():
-            key = language.encode('utf-8')
+            key = language
+            print('exporting %s' % language)
             if values_folder_dict.get(key) is not None:
                 folder = values_folder_dict[key]
                 file_path = '%s%s/strings.xml' % (res_path, folder)
-                print('exporting %s' % folder)
+                print('exporting to %s' % folder)
                 export_to_xml(file_path, res_dict[language], key_list, backup_origin_string_xml)
     print('finish...')
 
@@ -84,27 +94,45 @@ def export_to_xml(file_path, trans_list, key_list, backup_origin_string_xml):
     # check if need backup
     if backup_origin_string_xml:
         os.rename(file_path, file_path.replace('strings.xml', 'strings-backup.xml'))
-
-    with open(file_path, 'a+') as f:
-
-        # delete the last </resources> tag
-        pos = f.tell() - 1
-        while pos > 0 and f.read(1) != '\n':
-            pos -= 1
-            f.seek(pos, os.SEEK_SET)
-
-        if pos > 0:
-            f.seek(pos, os.SEEK_SET)
-            f.truncate()
-
+    # current strings.xml
+    old_dict = parse_android_strings_xml(file_path)
+    # replace or add
+    for index in range(len(key_list)):
+        key = key_list[index]
+        value = trans_list[index]
+        old_dict[key] = value
+    with open(file_path, 'w+', encoding='utf-8') as f:
+        f.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
         f.write('\n')
-        for index in range(len(key_list)):
-            key = key_list[index]
-            value = trans_list[index]
+        f.write('<resources>')
+        f.write('\n')
+        for item in old_dict.items():
+            key = item[0]
+            value = item[1]
             f.write('    ')
             f.write(formatter.format(name=key, str=value))
             f.write('\n')
         f.write('</resources>')
+    # with open(file_path, 'a+', encoding='utf-8') as f:
+    #
+    #     # delete the last </resources> tag
+    #     pos = f.tell() - 1
+    #     while pos > 0 and f.read(1) != '\n':
+    #         pos -= 1
+    #         f.seek(pos, os.SEEK_SET)
+    #
+    #     if pos > 0:
+    #         f.seek(pos, os.SEEK_SET)
+    #         f.truncate()
+    #
+    #     f.write('\n')
+    #     for index in range(len(key_list)):
+    #         key = key_list[index]
+    #         value = trans_list[index]
+    #         f.write('    ')
+    #         f.write(formatter.format(name=key, str=value))
+    #         f.write('\n')
+    #     f.write('</resources>')
 
 
 def write_result_to_xml(res_dict, key_list):
@@ -159,6 +187,54 @@ def excel_column_to_number(column: str) -> int:
     return result
 
 
+def parse_android_strings_xml(file_path):
+    """
+    解析 Android 的 strings.xml 文件，返回字典（name -> value）
+
+    参数:
+    file_path (str): strings.xml 文件的路径
+
+    返回:
+    OrderedDict: 保持原始顺序的字典，键为字符串名称，值为字符串内容
+    """
+    # 创建有序字典以保持 XML 中的原始顺序
+    string_dict = OrderedDict()
+
+    try:
+        # 解析 XML 文件
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+
+        # 遍历所有 <string> 元素
+        for string_elem in root.findall('string'):
+            # 获取 name 属性值
+            name = string_elem.get('name')
+
+            if name:
+                # 获取文本内容，处理 CDATA 和转义字符
+                text = string_elem.text or ""
+
+                # 处理转义字符（XML 实体）
+                # 这里只处理基本转义，如有需要可以扩展
+                text = text.replace("&amp;", "&")
+                text = text.replace("&lt;", "<")
+                text = text.replace("&gt;", ">")
+                text = text.replace("&quot;", "\"")
+                text = text.replace("&apos;", "'")
+
+                # 添加到字典
+                string_dict[name] = text
+
+    except ET.ParseError as e:
+        print(f"XML 解析错误: {e}")
+    except FileNotFoundError:
+        print(f"文件未找到: {file_path}")
+    except Exception as e:
+        print(f"发生错误: {e}")
+
+    return string_dict
+
+
 '''
 {name} : the key name placeholder
 {str} : the translation placeholder
@@ -166,33 +242,42 @@ def excel_column_to_number(column: str) -> int:
 formatter = '<string name=\"{name}\">{str}</string>'
 values_folder_dict = {
     '英语': 'values',
-    '简体中文': 'values-zh-rCN',
-    '英文 en': 'values',
-    '繁中 zh_TW': 'values-zh-rTW',
-    '日文 ja': 'values-ja',
-    '韩语 ko': 'values-ko',
-    '西语 es': 'values-es',
-    '葡语 pt': 'values-pt',
-    '俄语 ru': 'values-ru',
-    '法语 fr': 'values-fr',
+    '中文': 'values-zh-rCN',
+    # '英文': 'values',
+    # '繁体中文': 'values-zh-rTW',
+    # '日文': 'values-ja',
+    '韩语': 'values-ko',
+    # '西班牙语': 'values-es',
+    '葡萄牙语（葡萄牙）': 'values-pt',
+    '葡萄牙语（巴西）': 'values-pt-rBR',
+    # '俄文': 'values-ru',
+    '法语': 'values-fr',
     '德语': 'values-de',
     '土耳其语': 'values-tr',
     '意大利语': 'values-it',
+    '印尼语': 'values-in',
     '泰语': 'values-th',
-    '越南语': 'values-vi'
+    '越南语': 'values-vi',
+    '马来语': 'values-ms',
+    '菲律宾语': 'values-fil',
+    '缅甸语': 'values-my',
+    '印度语': 'values-hi'
 }
-res_path = 'res/'
+res_path = 'E://Collage/app/src/main/res/'
+# res_path = 'res/'
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     imp.reload(sys)
     read_excel(
+        # 'D://collage多语言.xlsx',
         './trans-sample.xlsx',
         sheet_name='Sheet1',
         start_column=excel_column_to_number('B'),
         end_col=excel_column_to_number('C'),
         start_row=2,
-        end_row=5,
+        end_row=6,
         key_column=1,
-        export_direct_to_res=False,
+        export_direct_to_res=True,
         backup_origin_string_xml=False
     )
+
