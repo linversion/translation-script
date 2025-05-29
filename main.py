@@ -1,6 +1,8 @@
-# coding=utf-8
+# _*_ coding: utf-8 _*_
 import os
 import sys
+import imp
+
 import openpyxl
 
 
@@ -73,7 +75,7 @@ def read_excel(path, sheet_name='Sheet1', start_column=1, start_row=1, key_colum
             if values_folder_dict.get(key) is not None:
                 folder = values_folder_dict[key]
                 file_path = '%s%s/strings.xml' % (res_path, folder)
-                print 'exporting %s' % folder
+                print('exporting %s' % folder)
                 export_to_xml(file_path, res_dict[language], key_list, backup_origin_string_xml)
     print('finish...')
 
@@ -106,10 +108,11 @@ def export_to_xml(file_path, trans_list, key_list, backup_origin_string_xml):
 
 
 def write_result_to_xml(res_dict, key_list):
-    with open('./result.xml', mode='w+') as res_file:
+    with open('./result.xml', mode='w+', encoding='utf-8') as res_file:
         for (key, value) in res_dict.items():
             language = key
             res_file.write('<!-- {lang} -->\n'.format(lang=language))
+            print('write %s' % language)
             for index in range(len(value)):
                 lang_value = value[index].strip()
                 if lang_value != 'blank_value':
@@ -120,6 +123,40 @@ def write_result_to_xml(res_dict, key_list):
 
                     res_file.write('\n')
             res_file.write('\n\n')
+
+
+def excel_column_to_number(column: str) -> int:
+    """
+    将Excel列名称转换为对应的列号
+
+    参数:
+    column (str): Excel列名称（如'A', 'AB', 'XFD'）
+
+    返回:
+    int: 对应的列号
+
+    异常:
+    ValueError: 如果输入包含非字母字符
+    """
+    if not column.isalpha():
+        raise ValueError("输入必须只包含字母")
+
+    column = column.upper()
+    result = 0
+
+    # 从右向左处理每个字符
+    for char in column:
+        # 验证是否在A-Z范围内
+        if not 'A' <= char <= 'Z':
+            raise ValueError(f"无效字符 '{char}'")
+
+        # 转换为数字 (A=1, B=2, ..., Z=26)
+        value = ord(char) - ord('A') + 1
+
+        # 累加结果，相当于26进制转换
+        result = result * 26 + value
+
+    return result
 
 
 '''
@@ -147,16 +184,15 @@ values_folder_dict = {
 res_path = 'res/'
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    reload(sys)
-    sys.setdefaultencoding('utf8')
+    imp.reload(sys)
     read_excel(
-        'trans-sample.xlsx',
+        './trans-sample.xlsx',
         sheet_name='Sheet1',
-        start_column=1,
-        end_col=3,
+        start_column=excel_column_to_number('B'),
+        end_col=excel_column_to_number('C'),
         start_row=2,
         end_row=5,
         key_column=1,
-        export_direct_to_res=True,
+        export_direct_to_res=False,
         backup_origin_string_xml=False
     )
